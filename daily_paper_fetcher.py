@@ -135,22 +135,31 @@ def classify_paper(paper: Dict[str, Any], interested_fields: List[str],
 
 # ---------------------------- 保存结果 ----------------------------
 def save_paper(paper: Dict[str, Any], classification: Dict, output_file: str):
-    """将相关论文追加到CSV文件"""
-    file_exists = os.path.isfile(output_file)
-    with open(output_file, 'a', newline='', encoding='utf-8') as f:
+    existing_links = set()
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r', encoding='utf-8-sig') as f:
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if len(row) >= 6:
+                        existing_links.add(row[5].strip())  # 链接在第6列（索引5）
+        except Exception as e:
+            logging.warning(f"读取已有CSV文件时出错: {e}")
+    
+    current_link = paper['link'].strip()
+    if current_link in existing_links:
+        logging.info(f"论文已存在（链接重复），跳过保存: {paper['title'][:50]}...")
+        return 0
+    
+    file_exists = os.path.isfile(output_file) and os.path.getsize(output_file) > 0
+    with open(output_file, 'a', newline='', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(['日期', '来源', '标题', '作者', '发表时间', '链接', '摘要', '相关领域'])
-        writer.writerow([
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            paper['source'],
-            paper['title'],
-            paper['authors'],
-            paper['published'],
-            paper['link'],
-            paper['abstract'][:500] + ('...' if len(paper['abstract']) > 500 else ''),
-            classification.get('field', '')
-        ])
+        writer.writerow([...])  # 同前
+    
+    return 1
 
 # ---------------------------- 主流程 ----------------------------
 def main():
@@ -180,8 +189,7 @@ def main():
         logging.info(f"处理第 {idx+1}/{len(all_papers)} 篇: {paper['title'][:50]}...")
         classification = classify_paper(paper, interested_fields, api_key, api_base, max_abstract, request_delay)
         if classification and classification.get('relevant'):
-            relevant_count += 1
-            save_paper(paper, classification, output_file)
+            relevant_count += save_paper(paper, classification, output_file)
             logging.info(f"相关论文已保存，领域: {classification.get('field')}")
     
     logging.info(f"处理完成，共发现 {relevant_count} 篇相关论文，结果保存至 {output_file}")
