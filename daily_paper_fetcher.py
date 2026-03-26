@@ -157,7 +157,16 @@ def save_paper(paper: Dict[str, Any], classification: Dict, output_file: str):
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(['日期', '来源', '标题', '作者', '发表时间', '链接', '摘要', '相关领域'])
-        writer.writerow([...])  # 同前
+        writer.writerow([
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            paper['source'],
+            paper['title'],
+            paper['authors'],
+            paper['published'],
+            paper['link'],
+            paper['abstract'][:500] + ('...' if len(paper['abstract']) > 500 else ''),
+            classification.get('field', '')
+        ])
     
     return 1
 
